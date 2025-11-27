@@ -1,0 +1,170 @@
+Project: penugasan-gdgoc-be
+Location: c:\laragon\www\penugasan-gdgoc-be
+Date: 2025-11-27
+
+Purpose:
+Ringkasan struktur folder/file proyek dan peran tiap komponen. Gunakan file ini saat perlu menjelaskan arsitektur atau untuk presentasi.
+
+---
+ROOT FILES
+---
+- docker-compose.yml
+  : (optional) Docker compose configuration for multi-container runs (if present).
+- Dockerfile
+  : (optional) Docker image build instructions for containerizing the app.
+- Makefile
+  : Convenience targets for common tasks (build, run, test) if present.
+- pyproject.toml
+  : Project metadata and Python dependencies / build system (PEP 621 / poetry/ setuptools).
+- requirements.txt (may exist)
+  : List of Python packages (pip). Use if present instead of pyproject-tooling.
+- README.md
+  : Project overview and quickstart instructions.
+- .env
+  : Environment variables (DATABASE_URL, GEMINI_API_KEY, SECRET_KEY, DEBUG, etc.).
+- GEMINI_SETUP.md
+  : Guide how to obtain and configure Gemini API key and test semantic search.
+- EXPLAIN.md
+  : Mapping MVC (Laravel) → FastAPI project explanation prepared for presentation.
+- SETUP_MENU_API.md
+  : Setup and usage details for the Menu API (if present).
+- PROJECT_STRUCTURE.txt
+  : (this file) documentation of project layout.
+
+---
+APP PACKAGE (Python package root `app/`)
+Path: app/
+Purpose: Application package containing API, models, core configuration and services.
+
+- app/__init__.py
+  : Package marker; may be empty or set package-level exports.
+- app/main.py
+  : FastAPI application factory. Imports routers, registers startup handlers and returns `app` instance used by Uvicorn.
+- app/db.py
+  : Database engine and session factory (SQLAlchemy `engine`, `SessionLocal`, `Base`). Central place to configure DATABASE_URL.
+
+app/core/
+- app/core/__init__.py
+  : Package marker for core components.
+- app/core/config.py
+  : Loads configuration from environment (using python-decouple / pydantic / os). Exposes constants like `DATABASE_URL`, `GEMINI_API_KEY`, `API_PREFIX`, `DEBUG`, `PROJECT_NAME`, `VERSION`, and MEMOIZATION flags.
+- app/core/events.py
+  : Startup / shutdown event handlers (e.g., initialize caches, connectors, logging).
+- app/core/errors.py
+  : Centralized error classes or helper functions for custom HTTP responses.
+- app/core/logging.py
+  : Logging setup (Loguru or standard logging configuration).
+- app/core/paginator.py
+  : Helper utilities for pagination metadata, page math, etc.
+
+app/api/
+- app/api/__init__.py
+  : Router package marker.
+- app/api/routes/
+  : Folder that contains route modules (each file maps to a related set of endpoints).
+
+  - app/api/routes/api.py
+    : Central router aggregator that imports route modules (e.g., `menu`, `predictor`) and exposes a `router` object. This router is included into main app with API prefix.
+  - app/api/routes/menu.py
+    : Menu endpoints (CRUD, list, filters, grouping, semantic `search` endpoint). Handles request parameters, pagination, sorting and responses. Uses SQLAlchemy models and Gemini service for semantic search.
+  - app/api/routes/predictor.py
+    : ML prediction endpoints: `/predict` and `/health`. Uses model handler service (joblib load) and logs requests into `RequestLog`.
+
+app/models/
+- app/models/__init__.py
+  : Package marker for models.
+- app/models/menu.py
+  : SQLAlchemy model `Menu` representing `menus` table. Also contains Pydantic schemas: `MenuCreate`, `MenuUpdate`, `MenuResponse`, `MenuListResponse`, and other response models.
+- app/models/prediction.py
+  : Pydantic request/response models for ML prediction endpoints (MachineLearningDataInput, MachineLearningResponse, HealthResponse, etc.).
+- app/models/log.py
+  : SQLAlchemy model for request logging (`RequestLog`) used by predictor endpoint to store incoming requests and metadata.
+
+app/services/
+- app/services/__init__.py
+  : Package marker for services.
+- app/services/predict.py
+  : Service wrapping ML model loading and prediction logic (MachineLearningModelHandlerScore). Provides `predict()` and abstraction around joblib/model caching.
+- app/services/gemini_search.py
+  : Service that integrates with Google Generative AI (Gemini) SDK. Responsibilities:
+    - Build prompt that describes `menus` schema and example queries.
+    - Query Gemini model to convert natural-language search to structured filter (SQL WHERE, filters or keywords).
+    - Fallback to keyword-based DB search if API key missing or Gemini fails.
+    - Return list of menu IDs or filter conditions used by `menu` route.
+
+ml/
+- ml/__init__.py
+- ml/data/
+  - make_dataset.py  : dataset preparation scripts if present.
+- ml/features/
+  - build_features.py : feature engineering helper scripts.
+- ml/model/
+  - examples/         : e.g., `example.json` used by health endpoint as sample input
+  - (optional) model.pkl or model artifact used by `predict` service if MEMOIZATION_FLAG enabled
+
+notebooks/
+- Jupyter notebooks for experiments and analysis (optional).
+
+tests/
+- tests/__init__.py
+- tests/test_api_predictor.py
+- tests/test_config_and_errors.py
+- tests/test_events_and_main.py
+- tests/test_pagination_behavior.py
+- tests/test_predict_service.py
+- tests/test_predictor.py
+- tests/test_request_logging.py
+  : Unit and integration tests to validate endpoints, config behavior and service logic.
+
+setup_db.py
+- Script to initialize the database and seed sample `menus` records. Useful for local development and demo data.
+
+scripts/
+- (optional) Utility scripts used during development, migrations, or deployments.
+
+.env
+- Environment file with variables used in development. Typical keys:
+  - SECRET_KEY
+  - DEBUG
+  - DATABASE_URL (default uses SQLite `sqlite:///./app.db` for local)
+  - GEMINI_API_KEY (Gemini integration - required for semantic search)
+  - MODEL_PATH / MODEL_NAME / MEMOIZATION_FLAG
+
+---
+How the pieces work together (high level):
+1. `app.main` builds the FastAPI app and includes `api` router (from `app/api/routes/api.py`).
+2. `api` router exposes endpoints defined in `app/api/routes/*.py` (menu, predictor). Each route function acts as controller: validate input (Pydantic), open DB session (`SessionLocal` from `app/db.py`), call models/services, return Pydantic response.
+3. Database models (SQLAlchemy) live in `app/models/*`. Pydantic schemas live alongside models and are used for request/response validation.
+4. Services in `app/services/*` contain business logic and external integrations (Gemini, ML model). Controllers call services to keep logic modular.
+5. `setup_db.py` is used to create tables and seed initial data for development.
+6. `.env` config + `app/core/config.py` provide centralized configuration. `app/core/events.py` registers startup tasks like connecting to external systems.
+
+Quick run checklist (PowerShell):
+1. cd to project root:
+   cd C:\laragon\www\penugasan-gdgoc-be
+2. (optional) create & activate venv:
+   python -m venv venv
+   # If PowerShell policy blocks activation, run as cmd or change policy
+   .\venv\Scripts\Activate.ps1
+   # or (cmd) venv\Scripts\activate.bat
+3. Install dependencies:
+   pip install -r requirements.txt
+   # or install packages referenced in pyproject.toml
+4. Setup DB & seed data (run once):
+   python setup_db.py
+5. Ensure `.env` has `GEMINI_API_KEY` if you want semantic search.
+6. Start server:
+   python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+7. Open docs for testing: http://localhost:8080/docs
+
+Notes & tips for presentation:
+- Map Laravel concepts to this repo: routes => `app/api/routes`, controller logic => functions inside routes, model => SQLAlchemy + Pydantic, migrations => `setup_db.py` (or Alembic for production), services => `app/services`.
+- For semantic search demo: set `GEMINI_API_KEY` in `.env`, restart server, call `GET /api/menu/search?q=...`.
+- If import errors appear when running, ensure PYTHONPATH includes project root, or run from project root and use package imports (`from app...`).
+
+---
+If you ingin, saya bisa juga:
+- Generate a printable one-page slide (3 bullets per area) for your presentation,
+- Or produce a short speaker-note script that you can read during submit.
+
+File generated by assistant.

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Menu Catalog — Chat</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>Menu Catalog — Chat</h1>
+        <p class="lead">Tanyakan apa saja tentang menu. Berikan sedikit info tentangmu pada kotak profil untuk jawaban yang lebih personal.</p>
+      </header>
+
+      <section class="card chat-card">
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <!-- Persona UI removed: chat will automatically use persona 'rakan' -->
+
+        <textarea id="question" placeholder="Tulis pertanyaanmu di sini..." rows="3"></textarea>
+        <div class="actions">
+          <button id="send" class="btn">Kirim</button>
+        </div>
+      </section>
+
+      <footer class="footer">Powered by Gemini (semantic chat) · <a href="/api/docs">API Docs</a></footer>
+    </main>
+
+    <script src="/static/js/chat.js"></script>
+  </body>
+  </html>
