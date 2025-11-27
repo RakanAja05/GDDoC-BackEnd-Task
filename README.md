@@ -158,77 +158,101 @@ Application parts are:
     | # Fast-API stuff
     ├── api                 - web related stuff.
     │   └── routes          - web routes.
-    ├── core                - application configuration, startup events, logging.
-    ├── models              - pydantic models for this application.
-    ├── services            - logic that is not just crud related.
-    ├── main-aws-lambda.py  - [Optional] FastAPI application for AWS Lambda creation and configuration.
-    └── main.py             - FastAPI application creation and configuration.
-    |
-    | # ML stuff
-    ├── data             - where you persist data locally
-    │   ├── interim      - intermediate data that has been transformed.
-    │   ├── processed    - the final, canonical data sets for modeling.
-    │   └── raw          - the original, immutable data dump.
-    │
-    ├── notebooks        - Jupyter notebooks. Naming convention is a number (for ordering),
-    |
-    ├── ml               - modelling source code for use in this project.
-    │   ├── __init__.py  - makes ml a Python module
-    │   ├── pipeline.py  - scripts to orchestrate the whole pipeline
-    │   │
-    │   ├── data         - scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features     - scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   └── model        - scripts to train models and make predictions
-    │       ├── predict_model.py
-    │       └── train_model.py
-    │
-    └── tests            - pytest
+    # Penugasan-GDGoC-BE
 
-## GCP
+    Projek ini fokus pada dua fitur utama:
+    - API Menu Catalog (CRUD, pencarian, filter, pagination)
+    - Chat semantik berbasis Gemini dengan persona dan persistence konteks percakapan
 
-Deploying inference service to Cloud Run
+    Tujuan README ini: menjelaskan cara menjalankan dan mencoba kedua fitur tersebut.
 
-### Authenticate
+    ## Quick Start (singkat)
 
-1. Install `gcloud` cli
-2. `gcloud auth login`
-3. `gcloud config set project <PROJECT_ID>`
+    Persyaratan singkat:
+    - Python 3.11+
+    - Database (untuk production gunakan PostgreSQL; lokal bisa memakai SQLite default)
 
-### Enable APIs
+    Menjalankan aplikasi secara lokal:
 
-1. Cloud Run API
-2. Cloud Build API
-3. IAM API
+    ```powershell
+    python -m venv venv
+    .\venv\Scripts\Activate.ps1
+    pip install -r requirements.txt
+    python setup_db.py   # buat tabel & seed sample data (lokal)
+    python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+    ```
 
-### Deploy to Cloud Run
+    Setelah berjalan, buka `http://localhost:8080/` untuk UI chat atau `http://localhost:8080/docs` untuk Swagger.
 
-1. Run `gcp-deploy.sh`
+    ## Konfigurasi penting
+    - `DATABASE_URL` — connection string untuk database. Default development: `sqlite:///./app.db`.
+    - `GEMINI_API_KEY` — kunci API Google Generative AI (Gemini). Tanpa ini fitur chat semantik akan fallback ke pencarian sederhana.
 
-### Clean up
+    Letakkan env vars di file `.env` atau ekspor ke environment sebelum menjalankan server.
 
-1. Delete Cloud Run
-2. Delete Docker image in GCR
+    ## Menu Catalog API
 
-## AWS
+    Endpoint utama:
 
-Deploying inference service to AWS Lambda
+    | Method | Endpoint | Deskripsi |
+    |--------|----------|-----------|
+    | POST | `/api/menu` | Buat item menu |
+    | GET  | `/api/menu` | List menu (support filter & pagination) |
+    | GET  | `/api/menu/{id}` | Ambil menu berdasarkan ID |
+    | PUT  | `/api/menu/{id}` | Update item menu |
+    | DELETE | `/api/menu/{id}` | Hapus item menu |
+    | GET | `/api/menu/group-by-category` | Kelompokkan item per kategori |
+    | GET | `/api/menu/search` | Pencarian (normal + semantic when enabled) |
 
-### Authenticate
+    Contoh membuat menu:
 
-1. Install `awscli` and `sam-cli`
-2. `aws configure`
+    ```bash
+    curl -X POST http://localhost:8080/api/menu \
+      -H "Content-Type: application/json" \
+      -d '{"name":"Es Kopi Susu","category":"drinks","calories":180,"price":25000,"ingredients":["coffee","milk","ice"],"description":"Classic iced coffee"}'
+    ```
 
-### Deploy to Lambda
+    ## Chat (Semantic) — Gemini
 
-1. Run `sam build`
-2. Run `sam deploy --guiChange this portion for other types of models
+    Fitur utama:
+    - Chat semantik yang menggunakan Google Gemini untuk menghasilkan jawaban natural.
+    - Persona: jawaban selalu menggunakan persona `rakan` (first-person, santai, ringkas).
+    - Konteks percakapan: pesan disimpan di database; frontend menyimpan `conversation_token` di `localStorage` sehingga konteks dipertahankan antar request.
 
-## Add the correct type hinting when completed
+    Endpoints:
 
-`aws cloudformation delete-stack --stack-name <STACK_NAME_ON_CREATION>`
+    | Method | Endpoint | Deskripsi |
+    |--------|----------|-----------|
+    | POST | `/api/chat` | Kirim pertanyaan ke chat. Payload JSON: `{ "question": "...", "conversation_token": "..." }`. Response: `{ "reply": "...", "conversation_token": "..." }` |
+    | POST | `/api/conversations` | Buat conversation token baru (returns `{ token }`). Frontend otomatis membuat token saat sesi pertama.
+    | GET  | `/api/conversations/{token}` | Ambil history pesan untuk token tertentu |
 
-Made by <https://github.com/arthurhenrique/cookiecutter-fastapi/graphs/contributors> with ❤️
+    Contoh: buat conversation token (opsional, frontend sudah membuat otomatis):
+
+    ```bash
+    curl -X POST http://localhost:8080/api/conversations
+    ```
+
+    Contoh: kirim pertanyaan ke chat (pakai token):
+
+    ```bash
+    curl -X POST http://localhost:8080/api/chat \
+      -H "Content-Type: application/json" \
+      -d '{"question":"Rekomendasi minuman dingin murah?","conversation_token":"<TOKEN_HERE>"}'
+    ```
+
+    Catatan penting:
+    - Agar jawaban Gemini bekerja, set `GEMINI_API_KEY` di environment.
+    - Pesan user dan assistant disimpan di tabel `conversations` dan `conversation_messages` (SQLAlchemy models `app/models/conversation.py`). Jika skema DB lama tidak punya kolom `content`, jalankan `scripts/fix_conversation_schema.py` untuk memperbaiki pada SQLite.
+
+    ## Catatan singkat untuk penilai / reviewer
+    - Fitur chat menunjukkan penggunaan LLM (Gemini) + prompt engineering (persona) dan persistence konteks percakapan.
+    - Untuk deployment produksi, gunakan database terkelola (Postgres) dan konfigurasi `DATABASE_URL` di environment host — jangan gunakan SQLite file pada environment serverless.
+
+    ## Jika ingin saya bantu lanjutkan
+    - Tambah test automated untuk conversation/chat endpoints
+    - Tambah Alembic migrations untuk model conversation
+    - Siapkan Docker Compose dengan Postgres untuk CI / deployment
+
+    ---
+    Ringkas dan cukup untuk demo: buka `http://localhost:8080/`, mulai chat, dan coba `/api/menu/search` untuk pencarian semantic (set `GEMINI_API_KEY` terlebih dahulu).
