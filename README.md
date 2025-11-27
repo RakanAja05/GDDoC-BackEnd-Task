@@ -1,15 +1,10 @@
 # Penugasan-GDGoC-BE
 
-Project for GDGoC recruitment - **FastAPI Backend with ML Prediction & Menu Catalog API**
+Project for GDGoC recruitment - **FastAPI Backend Menu Catalog API with chat persona**
 
 ## 🎯 Features
 
-### 1. Machine Learning Prediction API
-- Model prediction endpoint with configurable models
-- Health check endpoint
-- Request/response logging
-
-### 2. Menu Catalog API (NEW ✨)
+### 1. Menu Catalog API 
 - Full CRUD operations for menu management
 - Advanced search & filtering
 - Pagination & sorting
@@ -64,12 +59,6 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 | GET | `/api/menu/group-by-category` | Group items by category |
 | GET | `/api/menu/search` | Search menu items |
 
-### ML Prediction API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/predict` | Make prediction |
-| GET | `/api/v1/health` | Health check |
 
 ### Chat (Semantic) API — Gemini
 
