@@ -7,7 +7,6 @@ from ..models.conversation import Conversation, ConversationMessage
 
 
 def _ensure_tables():
-    # create tables if they don't exist (safe for development)
     Base.metadata.create_all(bind=engine)
 
 

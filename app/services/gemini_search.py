@@ -1,6 +1,3 @@
-"""
-Gemini AI service for semantic menu search
-"""
 import google.generativeai as genai
 from typing import List, Dict, Any, Optional
 from loguru import logger
@@ -8,7 +5,6 @@ from ..core.config import GEMINI_API_KEY
 
 
 class GeminiSearchService:
-    """Service for semantic search using Gemini API"""
     
     def __init__(self):
         self.api_key = GEMINI_API_KEY
@@ -20,14 +16,9 @@ class GeminiSearchService:
             logger.warning("Gemini API key not configured")
     
     def is_available(self) -> bool:
-        """Check if Gemini service is available"""
         return self.model is not None
     
     def parse_search_query(self, query: str, menu_items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Parse natural language search query using Gemini
-        Returns filter parameters that can be used for database query
-        """
         if not self.is_available():
             logger.warning("Gemini API not available, using simple search")
             return self._simple_search(query, menu_items)
@@ -71,7 +62,6 @@ Return ONLY the JSON object, no explanation:"""
             return self._simple_search(query, menu_items)
     
     def _simple_search(self, query: str, menu_items: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Fallback simple keyword search"""
         return {
             "category": None,
             "min_price": None,
@@ -81,7 +71,6 @@ Return ONLY the JSON object, no explanation:"""
         }
     
     def _get_menu_sample(self) -> str:
-        """Get sample menu for context"""
         return """
 - "Es Kopi Susu" (drinks, 180 cal, Rp 25000)
 - "Nasi Goreng" (food, 450 cal, Rp 35000)

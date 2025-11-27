@@ -32,7 +32,6 @@ def get_db():
 
 @router.post("/menu", response_model=MenuCreateResponse, status_code=201)
 async def create_menu(menu: MenuCreate):
-    """Create a new menu item"""
     try:
         with SessionLocal() as db:
             db_menu = Menu(**menu.model_dump())
@@ -59,7 +58,6 @@ async def list_menu(
     per_page: Optional[str] = Query("10", description="Items per page"),
     sort: Optional[str] = Query(None, description="Sort by field:order (e.g., price:asc, name:desc)"),
 ):
-    """List all menu items with optional filters and pagination"""
     try:
         # Convert and validate parameters
         q = q.strip() if q and q.strip() else None
@@ -159,7 +157,6 @@ async def group_by_category(
     mode: Literal["count", "list"] = Query("count", description="Mode: count or list"),
     per_category: int = Query(5, ge=1, le=100, description="Items per category (only for list mode)"),
 ):
-    """Group menu items by category"""
     try:
         with SessionLocal() as db:
             if mode == "count":
@@ -194,7 +191,6 @@ async def search_menu(
     page: Optional[str] = Query("1", description="Page number"),
     per_page: Optional[str] = Query("10", description="Items per page"),
 ):
-    """Search menu items using Gemini AI for natural language queries"""
     try:
         # Parse pagination
         try:
@@ -254,7 +250,6 @@ async def search_menu(
 
 @router.get("/menu/{menu_id}")
 async def get_menu(menu_id: int):
-    """Get a single menu item by ID"""
     try:
         with SessionLocal() as db:
             menu = db.query(Menu).filter(Menu.id == menu_id).first()
@@ -271,7 +266,6 @@ async def get_menu(menu_id: int):
 
 @router.put("/menu/{menu_id}", response_model=MenuUpdateResponse)
 async def update_menu(menu_id: int, menu: MenuUpdate):
-    """Full update of a menu item"""
     try:
         with SessionLocal() as db:
             db_menu = db.query(Menu).filter(Menu.id == menu_id).first()
@@ -298,7 +292,6 @@ async def update_menu(menu_id: int, menu: MenuUpdate):
 
 @router.delete("/menu/{menu_id}", response_model=MenuDeleteResponse)
 async def delete_menu(menu_id: int):
-    """Delete a menu item"""
     try:
         with SessionLocal() as db:
             db_menu = db.query(Menu).filter(Menu.id == menu_id).first()

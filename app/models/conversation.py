@@ -10,9 +10,7 @@ class Conversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String(64), unique=True, index=True, nullable=False)
-    # --- PERBAIKAN: Ganti 'metadata' menjadi 'extra_data' atau sejenisnya ---
     extra_data = Column(Text, nullable=True) 
-    # ------------------------------------------------------------------------
     created_at = Column(DateTime, default=datetime.utcnow)
     messages = relationship("ConversationMessage", back_populates="conversation", cascade="all, delete-orphan")
 

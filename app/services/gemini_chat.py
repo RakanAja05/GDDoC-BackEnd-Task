@@ -1,8 +1,3 @@
-"""
-Gemini Chat service
-
-Provides a small wrapper to call Gemini for single-turn or multi-turn chat.
-"""
 from typing import Optional, List, Dict, Any
 from loguru import logger
 import google.generativeai as genai
@@ -10,7 +5,6 @@ from ..core.config import GEMINI_API_KEY
 
 
 class GeminiChatService:
-    """Simple Gemini chat wrapper."""
 
     def __init__(self):
         self.api_key = GEMINI_API_KEY

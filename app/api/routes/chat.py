@@ -30,10 +30,8 @@ async def chat_endpoint(payload: ChatRequest = Body(...)):
         return {"reply": "Chat unavailable (Gemini API key not configured)."}
 
     user_profile = payload.user_profile or {}
-    # if persona preset requested, load preset and merge (preset values kept unless overridden)
     if payload.as_persona and payload.persona_preset:
         preset = get_preset(payload.persona_preset)
-        # merge preset into user_profile without overwriting explicit fields
         merged = {**preset, **{k: v for k, v in (user_profile or {}).items() if v is not None}}
         user_profile = merged
 
@@ -46,7 +44,6 @@ async def chat_endpoint(payload: ChatRequest = Body(...)):
         tone = user_profile.get("tone", "santai, langsung")
         style_hint = user_profile.get("style_hint", "jawab singkat dan santai; gunakan kata 'saya' untuk merujuk pada diri sendiri.")
 
-        # build a concise system prompt that instructs the assistant to roleplay the persona
         parts = [
             f"You are roleplaying as {name}.",
             "Answer in Indonesian, in first-person (saya).",
@@ -54,7 +51,6 @@ async def chat_endpoint(payload: ChatRequest = Body(...)):
             f"Tone: {tone}.",
             f"Style hint: {style_hint}.",
         ]
-        # include background and preferences if present
         if background:
             parts.append(f"Background: {background}.")
         if prefs:
@@ -62,16 +58,13 @@ async def chat_endpoint(payload: ChatRequest = Body(...)):
 
         parts.append("If you do not know something, say 'Saya tidak tahu' rather than inventing facts. Keep answers concise unless asked for more details.")
 
-        # join non-empty parts
         system_prompt = " ".join([p for p in parts if p])
 
-    # load conversation history if token provided
     conv_token = payload.conversation_token
     history = payload.conversation or []
     if conv_token:
         history = get_conversation_messages(conv_token)
 
-    # persist user message if a conversation token is present (so history includes it)
     if conv_token:
         append_message(conv_token, 'user', payload.question)
 
@@ -84,15 +77,10 @@ async def chat_endpoint(payload: ChatRequest = Body(...)):
 
     reply_text = result.get("reply", "")
 
-    # persist assistant reply if token present
     if conv_token:
         append_message(conv_token, 'assistant', reply_text)
-
-    # return reply and token (if any)
     return {"reply": reply_text, "conversation_token": conv_token}
 
-
-# Conversation management endpoints
 
 
 class ConversationCreateResponse(BaseModel):
